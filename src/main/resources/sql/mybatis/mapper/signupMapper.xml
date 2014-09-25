@@ -1,0 +1,1510 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.allchange.mybatis.mapper">
+
+	<insert id="insert" parameterType="com.allchange.mybatis.domain.Insert">
+		INSERT INTO GH_SEARCH VALUES(
+			(select if(count(GH_NO)=0,1,MAX(GH_NO)+1) GH_NO from GH_SEARCH sub),
+			#{GH_NM},
+			#{GH_LATITUDE},
+			#{GH_LONGITUDE},
+			#{GH_OWNER_CD},
+			#{GH_ROOM_CD},
+			#{GH_CHANNEL}
+		)
+	</insert>
+
+	<update id="checkOutAccommodation" parameterType="com.allchange.mybatis.domain.GB_CheckOut">
+		UPDATE GB_ACCOMMODATION SET
+			GB_LAST_DTIME=#{GB_LAST_DTIME},
+			GB_LAST_ID=#{GB_LAST_ID}
+		WHERE 
+		#{GB_CHECK_OUTDATE}>=GB_CHECK_OUTDATE
+	</update>
+
+	<insert id="checkOutCreateAccommodationLog" parameterType="com.allchange.mybatis.domain.GB_CheckOut">
+		INSERT INTO GB_ACCOMMODATION_LOG
+		SELECT *
+		FROM GB_ACCOMMODATION
+		WHERE #{GB_CHECK_OUTDATE}>=GB_CHECK_OUTDATE
+	</insert>
+
+	<delete id="checkOutDeleteAccommodation" parameterType="com.allchange.mybatis.domain.GB_CheckOut">
+		DELETE
+		FROM GB_ACCOMMODATION
+		WHERE #{GB_CHECK_OUTDATE}>=GB_CHECK_OUTDATE
+	</delete>
+
+	<select id="getCheckOutIdList" resultType="com.allchange.mybatis.domain.GB_CheckOut"
+		parameterType="com.allchange.mybatis.domain.GB_CheckOut">
+		SELECT GB_EMAIL_ID
+		FROM GB_ACCOMMODATION
+		WHERE #{GB_CHECK_OUTDATE}>=GB_CHECK_OUTDATE
+	</select>
+
+	<select id="getProperties" resultType="com.allchange.mybatis.domain.GB_Properties"
+		parameterType="com.allchange.mybatis.domain.GB_Properties">
+		SELECT *
+		FROM 
+			(
+			SELECT EMAIL_ID, GUEST_FNM, GUEST_LNM, NATIONALITY, CITY, BIRTH_DAY, SEX, PROFILE_IMG_PATH
+			FROM GB_GUEST
+			WHERE EMAIL_ID=#{EMAIL_ID}) GUEST
+		LEFT OUTER JOIN
+			(
+			SELECT GB_EMAIL_ID, GB_NM, GB_ADDRESS, GB_FOR, GB_WITH, GB_SEEKING, GB_CHECK_INDATE,
+			 GB_CHECK_OUTDATE, GB_LATITUDE, GB_LONGITUDE, GB_LAT_START, GB_LON_START,
+			 GB_LAT_END, GB_LON_END, GB_CHANNEL
+			FROM GB_ACCOMMODATION
+			WHERE GB_EMAIL_ID=#{EMAIL_ID}) ACCOMMODATION 
+		ON EMAIL_ID=GB_EMAIL_ID
+	</select>
+
+	<select id="getVisit" resultType="com.allchange.mybatis.domain.GB_Visit"
+		parameterType="com.allchange.mybatis.domain.GB_Visit">
+		SELECT GB_NM, GB_CHECK_INDATE, GB_CHECK_OUTDATE,
+			(
+			SELECT VISIT_NM
+			FROM GB_VISIT
+			WHERE VISIT_CD=GB_FOR) GB_FOR,
+			(
+			SELECT VISIT_NM
+			FROM GB_VISIT
+			WHERE VISIT_CD=GB_WITH) GB_WITH,
+			(
+			SELECT VISIT_NM
+			FROM GB_VISIT
+			WHERE VISIT_CD=GB_SEEKING) GB_SEEKING,
+			GB_CHANNEL
+		FROM GB_ACCOMMODATION
+		WHERE GB_EMAIL_ID=#{GB_EMAIL_ID}
+	</select>
+
+	<insert id="fbSignup" parameterType="com.allchange.mybatis.domain.GB_Signup">
+		insert into
+		GB_GUEST(GUEST_NO,EMAIL_ID,FACEBOOK_CODE,GOOGLE_CODE,GUEST_FNM,GUEST_LNM,NATIONALITY,CITY,BIRTH_DAY,SEX,E_MAIL,HP_NO,DEVICE_TYPE,REG_ID,EMAIL_FG,SMS_FG,RECEIPT_FG,PRIVACY_POLICY,JOIN_DATE,PROFILE_IMG_PATH,CREATE_DTIME,CREATE_ID,LAST_DTIME,LAST_ID)
+		values((select if(count(GUEST_NO)=0,1,MAX(GUEST_NO)+1) GUEST_NO
+		from
+		GB_GUEST
+		sub),#{EMAIL_ID},#{FACEBOOK_CODE},#{GOOGLE_CODE},#{GUEST_FNM},#{GUEST_LNM},
+		(select NATION_CD from GH_NATION sub where
+		NATION_ENG_NM=#{NATIONALITY}),
+		(select AREA_CD from GH_AREA sub where
+		AREA_ENG_NM=#{CITY}),
+		#{BIRTH_DAY},#{SEX},#{E_MAIL},#{HP_NO},#{DEVICE_TYPE},#{REG_ID},#{EMAIL_FG},#{SMS_FG},#{RECEIPT_FG},#{PRIVACY_POLICY},#{JOIN_DATE},#{PROFILE_IMG_PATH},#{CREATE_DTIME},#{CREATE_ID},#{LAST_DTIME},#{LAST_ID})
+	</insert>
+	
+	<select id="checkAccommodation" resultType="com.allchange.mybatis.domain.GB_CreateAccommodation"
+		parameterType="com.allchange.mybatis.domain.GB_CreateAccommodation">
+		SELECT *
+		FROM GB_ACCOMMODATION
+		WHERE GB_EMAIL_ID=#{GB_EMAIL_ID}
+	</select>
+	
+	<insert id="createAccommodation" parameterType="com.allchange.mybatis.domain.GB_CreateAccommodation">
+		INSERT INTO GB_ACCOMMODATION VALUES(
+			(
+			SELECT IF((
+				SELECT COUNT(GB_NO)
+				FROM GB_ACCOMMODATION_LOG
+				WHERE GB_NM=#{GB_NM} AND
+					GB_LATITUDE=#{GB_LATITUDE} AND
+					GB_LONGITUDE=#{GB_LONGITUDE})=0,
+				IF((
+					SELECT COUNT(GB_NO)
+					FROM GB_ACCOMMODATION sub
+					WHERE GB_NM=#{GB_NM} AND
+						GB_LATITUDE=#{GB_LATITUDE} AND
+						GB_LONGITUDE=#{GB_LONGITUDE})=0,
+					(
+					SELECT IF(COUNT(GB_NO)=0,1, MAX(GB_NO)+1) GB_NO FROM GB_ACCOMMODATION sub),
+					(
+					SELECT DISTINCT GB_NO
+					FROM GB_ACCOMMODATION sub
+					WHERE GB_NM=#{GB_NM} AND
+						GB_LATITUDE=#{GB_LATITUDE} AND
+						GB_LONGITUDE=#{GB_LONGITUDE})),
+				(
+				SELECT DISTINCT GB_NO
+				FROM GB_ACCOMMODATION_LOG
+				WHERE GB_NM=#{GB_NM} AND
+					GB_LATITUDE=#{GB_LATITUDE} AND
+					GB_LONGITUDE=#{GB_LONGITUDE}))),
+			#{GB_NM},
+			#{GB_EMAIL_ID},
+			#{GB_ADDRESS},
+			(SELECT VISIT_CD FROM GB_VISIT WHERE VISIT_NM = #{GB_FOR}),
+			(SELECT VISIT_CD FROM GB_VISIT WHERE VISIT_NM = #{GB_WITH}),
+			(SELECT VISIT_CD FROM GB_VISIT WHERE VISIT_NM = #{GB_SEEKING}),
+			#{GB_CHECK_INDATE},
+			#{GB_CHECK_OUTDATE},
+			#{GB_LATITUDE},
+			#{GB_LONGITUDE},
+			#{GB_LAT_START},
+			#{GB_LON_START},
+			#{GB_LAT_END},
+			#{GB_LON_END},
+			#{GB_CREATE_DTIME},
+			#{GB_CREATE_ID},
+			#{GB_LAST_DTIME},
+			#{GB_LAST_ID},
+			#{GB_CHANNEL})
+	</insert>
+	
+	<insert id="createAccommodationLog" parameterType="com.allchange.mybatis.domain.GB_CreateAccommodation">
+		INSERT INTO GB_ACCOMMODATION_LOG
+			SELECT *
+			FROM GB_ACCOMMODATION
+			WHERE GB_EMAIL_ID=#{GB_EMAIL_ID}
+	</insert>
+	
+	<insert id="createShoutLog" parameterType="com.allchange.mybatis.domain.GB_CreateAccommodation">
+		INSERT INTO GB_SHOUT_MESSAGE_LOG
+			SELECT *
+			FROM GB_SHOUT_MESSAGE
+			WHERE SENDER_ID=#{GB_EMAIL_ID}
+	</insert>
+	
+	<insert id="deleteShout" parameterType="com.allchange.mybatis.domain.GB_CreateAccommodation">
+		DELETE
+		FROM GB_SHOUT_MESSAGE
+		WHERE SENDER_ID=#{GB_EMAIL_ID}
+	</insert>
+	
+	<update id="updateAccommodation" parameterType="com.allchange.mybatis.domain.GB_CreateAccommodation">
+		UPDATE GB_ACCOMMODATION a1
+		INNER JOIN 
+		(SELECT IF((
+				SELECT COUNT(GB_NO)
+				FROM GB_ACCOMMODATION_LOG
+				WHERE GB_NM=#{GB_NM} AND
+					GB_LATITUDE=#{GB_LATITUDE} AND
+					GB_LONGITUDE=#{GB_LONGITUDE})=0,
+				IF((
+					SELECT COUNT(GB_NO)
+					FROM GB_ACCOMMODATION sub
+					WHERE GB_NM=#{GB_NM} AND
+						GB_LATITUDE=#{GB_LATITUDE} AND
+						GB_LONGITUDE=#{GB_LONGITUDE})=0,
+					(
+					SELECT @RMAX:=@RMAX+1
+					FROM (
+						SELECT @RMAX := MAX(GB_NO)
+						FROM GB_ACCOMMODATION sub) RMAX),
+					(
+					SELECT DISTINCT GB_NO
+					FROM GB_ACCOMMODATION sub
+					WHERE GB_NM=#{GB_NM} AND
+						GB_LATITUDE=#{GB_LATITUDE} AND
+						GB_LONGITUDE=#{GB_LONGITUDE})),
+				(
+				SELECT DISTINCT GB_NO
+				FROM GB_ACCOMMODATION_LOG
+				WHERE GB_NM=#{GB_NM} AND
+					GB_LATITUDE=#{GB_LATITUDE} AND
+					GB_LONGITUDE=#{GB_LONGITUDE})) GB_NO) a2 SET
+			a1.GB_NO=a2.GB_NO,
+			GB_NM=#{GB_NM},
+			GB_EMAIL_ID=#{GB_EMAIL_ID},
+			GB_ADDRESS=#{GB_ADDRESS},
+			GB_FOR=(
+				SELECT VISIT_CD
+				FROM GB_VISIT
+				WHERE VISIT_NM = #{GB_FOR}),
+			GB_WITH=(
+				SELECT VISIT_CD
+				FROM GB_VISIT
+				WHERE VISIT_NM = #{GB_WITH}),
+			GB_SEEKING=(
+				SELECT VISIT_CD
+				FROM GB_VISIT
+				WHERE VISIT_NM = #{GB_SEEKING}),
+			GB_CHECK_INDATE=#{GB_CHECK_INDATE},
+			GB_CHECK_OUTDATE=#{GB_CHECK_OUTDATE},
+			GB_LATITUDE=#{GB_LATITUDE},
+			GB_LONGITUDE=#{GB_LONGITUDE},
+			GB_LAT_START=#{GB_LAT_START},
+			GB_LON_START=#{GB_LON_START},
+			GB_LAT_END=#{GB_LAT_END},
+			GB_LON_END=#{GB_LON_END},
+			GB_CREATE_DTIME=#{GB_CREATE_DTIME},
+			GB_CREATE_ID=#{GB_CREATE_ID},
+			GB_LAST_DTIME=#{GB_LAST_DTIME},
+			GB_LAST_ID=#{GB_LAST_ID},
+			GB_CHANNEL=#{GB_CHANNEL}
+		WHERE GB_EMAIL_ID=#{GB_EMAIL_ID}
+	</update>
+
+	<update id="updateAccommodationLastDTime" parameterType="com.allchange.mybatis.domain.GB_CreateAccommodation">
+		UPDATE GB_ACCOMMODATION SET
+			GB_LAST_DTIME=#{GB_LAST_DTIME},
+			GB_LAST_ID=#{GB_LAST_ID}
+		WHERE GB_EMAIL_ID=#{GB_EMAIL_ID}
+	</update>
+	
+	<select id="trippalGetPeopleList" resultType="com.allchange.mybatis.domain.GB_TrippalGetPeopleList"
+		parameterType="com.allchange.mybatis.domain.GB_TrippalGetPeopleList">
+		SELECT EMAIL_ID, GUEST_FNM, GUEST_LNM, PROFILE_IMG_PATH, GB_FOR, GB_WITH, GB_SEEKING, GB_LATITUDE, GB_LONGITUDE
+		FROM
+			(SELECT EMAIL_ID, GUEST_FNM, GUEST_LNM, PROFILE_IMG_PATH
+			FROM GB_GUEST
+			WHERE EMAIL_ID IN(
+				SELECT GB_EMAIL_ID
+				FROM (
+					SELECT GB_EMAIL_ID, GB_CHECK_INDATE, GB_CHECK_OUTDATE
+					FROM GB_ACCOMMODATION
+					WHERE
+						(SUBSTRING(GB_LATITUDE,5,4)>SUBSTRING((select GB_LAT_START from GB_ACCOMMODATION where GB_EMAIL_ID=#{EMAIL_ID}),5,4)
+							AND SUBSTRING((select GB_LAT_END from GB_ACCOMMODATION where GB_EMAIL_ID=#{EMAIL_ID}),5,4)> SUBSTRING(GB_LATITUDE,5,4)) AND
+						(SUBSTRING(GB_LONGITUDE,5,4)>SUBSTRING((select GB_LON_START from GB_ACCOMMODATION where GB_EMAIL_ID=#{EMAIL_ID}),5,4) 
+							AND SUBSTRING((select GB_LON_END from GB_ACCOMMODATION where GB_EMAIL_ID=#{EMAIL_ID}),5,4)> SUBSTRING(GB_LONGITUDE,5,4)) AND
+						(SUBSTRING((select GB_LATITUDE from GB_ACCOMMODATION where GB_EMAIL_ID=#{EMAIL_ID}),5,4)>SUBSTRING(GB_LAT_START,5,4)
+							AND SUBSTRING(GB_LAT_END,5,4)>SUBSTRING((select GB_LATITUDE from GB_ACCOMMODATION where GB_EMAIL_ID=#{EMAIL_ID}),5,4)) AND
+						(SUBSTRING((select GB_LONGITUDE from GB_ACCOMMODATION where GB_EMAIL_ID=#{EMAIL_ID}),5,4)>SUBSTRING(GB_LON_START,5,4)
+							AND SUBSTRING(GB_LON_END,5,4)>SUBSTRING((select GB_LONGITUDE from GB_ACCOMMODATION where GB_EMAIL_ID=#{EMAIL_ID}),5,4))) map
+				WHERE
+				GB_CHECK_OUTDATE>=#{SELECTED_DATE} AND #{SELECTED_DATE}>=GB_CHECK_INDATE)) guest_tbl
+		inner join
+			GB_ACCOMMODATION accommo_tbl
+		on guest_tbl.EMAIL_ID=accommo_tbl.GB_EMAIL_ID
+	</select>
+	
+	<select id="trippalGetLocationList" resultType="com.allchange.mybatis.domain.GB_TrippalGetLocationList"
+		parameterType="com.allchange.mybatis.domain.GB_TrippalGetLocationList">
+		SELECT GB_EMAIL_ID, GB_LATITUDE, GB_LONGITUDE
+				FROM GB_ACCOMMODATION
+				WHERE
+					(SUBSTRING(GB_LATITUDE,5,4)>SUBSTRING((select GB_LAT_START from GB_ACCOMMODATION where GB_EMAIL_ID=#{GB_EMAIL_ID}),5,4)
+						AND SUBSTRING((select GB_LAT_END from GB_ACCOMMODATION where GB_EMAIL_ID=#{GB_EMAIL_ID}),5,4)> SUBSTRING(GB_LATITUDE,5,4)) AND
+					(SUBSTRING(GB_LONGITUDE,5,4)>SUBSTRING((select GB_LON_START from GB_ACCOMMODATION where GB_EMAIL_ID=#{GB_EMAIL_ID}),5,4) 
+						AND SUBSTRING((select GB_LON_END from GB_ACCOMMODATION where GB_EMAIL_ID=#{GB_EMAIL_ID}),5,4)> SUBSTRING(GB_LONGITUDE,5,4)) AND
+					(SUBSTRING((select GB_LATITUDE from GB_ACCOMMODATION where GB_EMAIL_ID=#{GB_EMAIL_ID}),5,4)>SUBSTRING(GB_LAT_START,5,4)
+						AND SUBSTRING(GB_LAT_END,5,4)>SUBSTRING((select GB_LATITUDE from GB_ACCOMMODATION where GB_EMAIL_ID=#{GB_EMAIL_ID}),5,4)) AND
+					(SUBSTRING((select GB_LONGITUDE from GB_ACCOMMODATION where GB_EMAIL_ID=#{GB_EMAIL_ID}),5,4)>SUBSTRING(GB_LON_START,5,4)
+						AND SUBSTRING(GB_LON_END,5,4)>SUBSTRING((select GB_LONGITUDE from GB_ACCOMMODATION where GB_EMAIL_ID=#{GB_EMAIL_ID}),5,4)) AND
+					(GB_CHECK_OUTDATE>=(select GB_CHECK_INDATE from GB_ACCOMMODATION where GB_EMAIL_ID=#{GB_EMAIL_ID}) 
+						AND (select GB_CHECK_OUTDATE from GB_ACCOMMODATION where GB_EMAIL_ID=#{GB_EMAIL_ID})>=GB_CHECK_INDATE)
+	</select>
+	
+	<select id="trippalGetShoutList" resultType="com.allchange.mybatis.domain.GB_TrippalGetShoutList"
+		parameterType="com.allchange.mybatis.domain.GB_TrippalGetShoutList">
+		SELECT * FROM GB_SHOUT_MESSAGE WHERE SENDER_ID in(SELECT GB_EMAIL_ID
+						FROM GB_ACCOMMODATION
+						WHERE
+							(SUBSTRING(GB_LATITUDE,5,4)>SUBSTRING((select GB_LAT_START from GB_ACCOMMODATION where GB_EMAIL_ID=#{EMAIL_ID}),5,4)
+								AND SUBSTRING((select GB_LAT_END from GB_ACCOMMODATION where GB_EMAIL_ID=#{EMAIL_ID}),5,4)> SUBSTRING(GB_LATITUDE,5,4)) AND
+							(SUBSTRING(GB_LONGITUDE,5,4)>SUBSTRING((select GB_LON_START from GB_ACCOMMODATION where GB_EMAIL_ID=#{EMAIL_ID}),5,4) 
+								AND SUBSTRING((select GB_LON_END from GB_ACCOMMODATION where GB_EMAIL_ID=#{EMAIL_ID}),5,4)> SUBSTRING(GB_LONGITUDE,5,4)) AND
+							(SUBSTRING((select GB_LATITUDE from GB_ACCOMMODATION where GB_EMAIL_ID=#{EMAIL_ID}),5,4)>SUBSTRING(GB_LAT_START,5,4)
+								AND SUBSTRING(GB_LAT_END,5,4)>SUBSTRING((select GB_LATITUDE from GB_ACCOMMODATION where GB_EMAIL_ID=#{EMAIL_ID}),5,4)) AND
+							(SUBSTRING((select GB_LONGITUDE from GB_ACCOMMODATION where GB_EMAIL_ID=#{EMAIL_ID}),5,4)>SUBSTRING(GB_LON_START,5,4)
+								AND SUBSTRING(GB_LON_END,5,4)>SUBSTRING((select GB_LONGITUDE from GB_ACCOMMODATION where GB_EMAIL_ID=#{EMAIL_ID}),5,4)) AND
+							(GB_CHECK_OUTDATE>(select GB_CHECK_INDATE from GB_ACCOMMODATION where GB_EMAIL_ID=#{EMAIL_ID}) 
+								AND (select GB_CHECK_OUTDATE from GB_ACCOMMODATION where GB_EMAIL_ID=#{EMAIL_ID})>GB_CHECK_INDATE)) AND
+							(#{MESSAGE_DTIME}>=IF(#{MESSAGE_DTIME}=0,0,MESSAGE_DTIME))
+		ORDER BY MESSAGE_DTIME DESC LIMIT 20
+	</select>
+	
+	<insert id="trippalShout" parameterType="com.allchange.mybatis.domain.GB_TrippalShout">
+		INSERT INTO GB_SHOUT_MESSAGE VALUES(
+			#{EMAIL_ID},
+			(
+				SELECT GUEST_FNM
+				FROM GB_GUEST
+				WHERE EMAIL_ID=#{EMAIL_ID}),
+			(
+				SELECT GUEST_LNM
+				FROM GB_GUEST
+				WHERE EMAIL_ID=#{EMAIL_ID}),
+			#{MESSAGE},
+			#{MESSAGE_DTIME},
+			(
+				SELECT PROFILE_IMG_PATH
+				FROM GB_GUEST
+				WHERE EMAIL_ID=#{EMAIL_ID}))
+	</insert>
+	
+	<update id="trippalLocationUpdate" parameterType="com.allchange.mybatis.domain.GB_TrippalLocationUpdate">
+		UPDATE GB_ACCOMMODATION SET
+			GB_LAT_START=#{GB_LAT_START},
+			GB_LON_START=#{GB_LON_START},
+			GB_LAT_END=#{GB_LAT_END},
+			GB_LON_END=#{GB_LON_END}
+		WHERE GB_EMAIL_ID=#{GB_EMAIL_ID}
+	</update>
+	
+	<insert id="trippalCreateRoom" parameterType="com.allchange.mybatis.domain.GB_TrippalCreateRoom">
+		INSERT INTO GB_TALK_ROOM(ROOM_NO, MEMBER_EMAIL_ID, JOIN_DTIME) VALUES(
+			(
+			SELECT IF(COUNT(ROOM_NO)=0,1, MAX(ROOM_NO)+1) ROOM_NO
+			FROM GB_TALK_ROOM sub),
+			#{MEMBER_EMAIL_ID},
+			#{JOIN_DTIME})
+	</insert>
+	
+	<delete id="trippalDeleteRoom" parameterType="com.allchange.mybatis.domain.GB_TrippalDeleteRoom">
+		DELETE
+		FROM GB_TALK_ROOM
+		WHERE ROOM_NO=#{ROOM_NO} AND MEMBER_EMAIL_ID=#{MEMBER_EMAIL_ID}
+	</delete>
+	
+	<insert id="trippalJoinRoom" parameterType="com.allchange.mybatis.domain.GB_TrippalCreateRoom">
+		INSERT INTO GB_TALK_ROOM(ROOM_NO, MEMBER_EMAIL_ID, JOIN_DTIME) VALUES(
+			(SELECT ROOM_NO FROM GB_TALK_ROOM sub WHERE MEMBER_EMAIL_ID=#{EMAIL_ID} AND JOIN_DTIME=#{JOIN_DTIME}),
+			#{MEMBER_EMAIL_ID},
+			#{JOIN_DTIME})
+	</insert>
+	
+	<select id="trippalGetRoom" resultType="com.allchange.mybatis.domain.GB_TrippalGetRoom"
+		parameterType="com.allchange.mybatis.domain.GB_TrippalGetRoom">
+		SELECT ROOM_NO, EMAIL_ID, GUEST_FNM, GUEST_LNM, JOIN_DTIME, PROFILE_IMG_PATH
+		FROM
+			(
+			SELECT ROOM_NO, MEMBER_EMAIL_ID, JOIN_DTIME
+			FROM GB_TALK_ROOM
+			WHERE ROOM_NO IN(
+				SELECT ROOM_NO
+				FROM GB_TALK_ROOM
+				WHERE MEMBER_EMAIL_ID=#{EMAIL_ID})) ROOM
+		INNER JOIN
+				(
+				SELECT DISTINCT EMAIL_ID, GUEST_FNM, GUEST_LNM, PROFILE_IMG_PATH
+				FROM GB_GUEST
+			RIGHT OUTER
+			JOIN 
+				(
+				SELECT MEMBER_EMAIL_ID
+				FROM GB_TALK_ROOM
+				WHERE ROOM_NO IN(
+					SELECT ROOM_NO
+					FROM GB_TALK_ROOM
+					WHERE MEMBER_EMAIL_ID=#{EMAIL_ID})) MEMBER 
+			ON EMAIL_ID=MEMBER.MEMBER_EMAIL_ID) IMAGE
+		ON ROOM.MEMBER_EMAIL_ID=IMAGE.EMAIL_ID
+	</select>
+	
+	<insert id="writeGPSTrace" parameterType="com.allchange.mybatis.domain.GB_GPSTrace">
+		INSERT INTO GB_GPS_TRACE VALUES(
+			(
+				SELECT GB_NO
+				FROM GB_ACCOMMODATION
+				WHERE GB_EMAIL_ID=#{GB_EMAIL_ID}
+			),
+			#{GB_LATITUDE},
+			#{GB_LONGITUDE},
+			#{GB_EMAIL_ID},
+			(
+				SELECT GB_CHECK_INDATE
+				FROM GB_ACCOMMODATION
+				WHERE GB_EMAIL_ID=#{GB_EMAIL_ID}
+			),
+			(
+				SELECT GB_CHECK_OUTDATE
+				FROM GB_ACCOMMODATION
+				WHERE GB_EMAIL_ID=#{GB_EMAIL_ID}
+			),
+			#{CREATE_DTIME},
+			#{CREATE_ID},
+			#{LAST_DTIME},
+			#{LAST_ID})
+	</insert>
+
+	<select id="getGPSTrace" resultType="com.allchange.mybatis.domain.GB_GPSTrace">
+		SELECT GB_LATITUDE, GB_LONGITUDE
+		FROM
+		GB_GPS_TRACE
+	</select>
+	
+
+	<select id="writeLastMessageChk" resultType="com.allchange.mybatis.domain.WriteLastMessage"
+		parameterType="com.allchange.mybatis.domain.WriteLastMessage">
+		SELECT *
+		FROM GH_TALK_LAST_MESSAGES
+		WHERE SENDER_ID=#{SENDER_ID}
+	</select>
+
+	<select id="updateRoom" resultType="com.allchange.mybatis.domain.UpdateRoom"
+		parameterType="com.allchange.mybatis.domain.UpdateRoom">
+		SELECT *
+		FROM GH_TALK_MESSAGES
+		WHERE SENDER_ID IN
+		(
+			SELECT DISTINCT SENDER_ID
+			FROM GH_TALK_ROOM
+			WHERE 
+			CHECK_OUTDATE >= (
+				SELECT sub.CHECK_INDATE
+				FROM GH_TALK_ROOM sub
+				WHERE sub.ROOM_NO=#{ROOM_NO}) AND
+					(
+					SELECT sub.CHECK_OUTDATE
+					FROM GH_TALK_ROOM sub
+					WHERE sub.ROOM_NO=#{ROOM_NO}) >= CHECK_INDATE)
+		ORDER BY MESSAGE_DTIME DESC
+		LIMIT 20
+	</select>
+	
+	<select id="getRoomUserList" resultType="com.allchange.mybatis.domain.MakeRoom"
+		parameterType="com.allchange.mybatis.domain.MakeRoom">
+		SELECT SENDER_ID, GUEST_FNM, GUEST_LNM, LAST_MESSAGE, LAST_MESSAGE_DTIME, PROFILE_IMG_PATH
+		FROM 
+		GH_GUEST
+		INNER JOIN 
+		(
+			SELECT LAST_MSG_TABLE.SENDER_ID, LAST_MESSAGE, LAST_MESSAGE_DTIME
+			FROM GH_TALK_LAST_MESSAGES LAST_MSG_TABLE
+			INNER JOIN (
+				SELECT DISTINCT SENDER_ID
+				FROM GH_TALK_ROOM
+				WHERE 
+				CHECK_OUTDATE >= (
+					SELECT sub.CHECK_INDATE
+					FROM GH_TALK_ROOM sub
+					WHERE sub.ROOM_NO=#{ROOM_NO}) AND
+						(
+						SELECT sub.CHECK_OUTDATE
+						FROM GH_TALK_ROOM sub
+						WHERE sub.ROOM_NO=#{ROOM_NO}) >= CHECK_INDATE) SENDER_TABLE 
+			ON LAST_MSG_TABLE.SENDER_ID = SENDER_TABLE.SENDER_ID) MSG_TABLE 
+		ON EMAIL_ID = SENDER_ID
+	</select>
+		
+	<select id="getRoomNo" resultType="com.allchange.mybatis.domain.MakeRoom"
+		parameterType="com.allchange.mybatis.domain.MakeRoom">
+		SELECT ROOM_NO
+		FROM GH_TALK_ROOM
+		WHERE GH_NO=#{GH_NO} AND SENDER_ID=#{SENDER_ID} AND CHECK_INDATE=#{CHECK_INDATE} AND CHECK_OUTDATE=#{CHECK_OUTDATE}
+		ORDER BY ROOM_NO
+		LIMIT 1
+	</select>
+
+	<select id="getRoomList" resultType="com.allchange.mybatis.domain.RoomList"
+		parameterType="String">
+		SELECT ROOM_NO, GH_WORD
+		FROM GH_SEARCH
+		INNER JOIN
+		(
+			SELECT ROOM_NO, GH_NO
+			FROM GH_TALK_ROOM
+			WHERE SENDER_ID=#{SENDER_ID}) ROOM_TABLE 
+		ON GH_SEARCH.GH_NO = ROOM_TABLE.GH_NO
+	</select>
+
+	<select id="ghSearch" resultType="com.allchange.mybatis.domain.GhSearch"
+		parameterType="com.allchange.mybatis.domain.GhSearch">
+		SELECT GH_NO, GH_WORD, GH_LOCATE
+		FROM GH_SEARCH
+		WHERE IF(#{GH_LOCATE}='',GH_LOCATE!='',GH_LOCATE=#{GH_LOCATE}) AND IF(#{GH_WORD}='',GH_WORD LIKE '%',GH_WORD LIKE CONCAT(#{GH_WORD},'%'))
+	</select>
+
+	<select id="getRegId" resultType="com.allchange.mybatis.domain.Guest"
+		parameterType="String">
+		select REG_ID from GH_GUEST where EMAIL_ID=#{ID}
+	</select>
+	
+	<select id="getMasterRegId" resultType="com.allchange.mybatis.domain.Master"
+		parameterType="com.allchange.mybatis.domain.Master">
+		select REG_ID from GH_MASTER where GH_NO=#{GH_NO}
+	</select>
+
+	<select id="getRegIdCheckoutMember" resultType="com.allchange.mybatis.domain.Guest"
+		parameterType="String">
+		select REG_ID
+		from GH_GUEST where GUEST_NO in(select
+		RESERVE_NO from GH_RESERVE where
+		CHECK_OUTDATE=#{DATE}) group by REG_ID
+	</select>
+
+	<select id="signupConfirm" resultType="com.allchange.mybatis.domain.SignupConfirm"
+		parameterType="com.allchange.mybatis.domain.SignupConfirm">
+		select EMAIL_ID from GB_GUEST where EMAIL_ID =
+		#{EMAIL_ID}
+	</select>
+
+	<select id="login" resultType="com.allchange.mybatis.domain.Login"
+		parameterType="com.allchange.mybatis.domain.Login">
+		select EMAIL_ID, GUEST_FNM, GUEST_LNM, RES_SEQ,
+		RESERVE_DATE from GH_GUEST left outer join
+		(select RES_SEQ, RESERVE_NO,
+		RESERVE_DATE, CHECK_OUT_NO from GH_RESERVE
+		where RESERVE_NO=(select
+		GUEST_NO from GH_GUEST where
+		EMAIL_ID=#{EMAIL_ID}) and CHECK_OUT_NO is
+		null) r
+		on GUEST_NO=RESERVE_NO
+		where EMAIL_ID = #{EMAIL_ID} and
+		EMAIL_PWD
+		=
+		PASSWORD(#{EMAIL_PWD})
+	</select>
+
+	<select id="chkFRB" resultType="com.allchange.mybatis.domain.ChkFRB"
+		parameterType="com.allchange.mybatis.domain.Reserve">
+		select RES_SEQ CHK from GH_RESERVE where
+		RES_SEQ=#{RES_SEQ} and
+		GH_NO=#{GH_NO} and FLOOR_CD=#{FLOOR_CD} and
+		ROOM_CD=#{ROOM_CD}
+	</select>
+
+	<select id="rule" resultType="com.allchange.mybatis.domain.Rule"
+		parameterType="com.allchange.mybatis.domain.Reserve">
+		select GH_NM, RULE from GH_HOUSE where GH_NO=(select
+		GH_NO from GH_RESERVE where RES_SEQ=#{RES_SEQ})
+	</select>
+
+	<select id="room" resultType="com.allchange.mybatis.domain.Room"
+		parameterType="com.allchange.mybatis.domain.Reserve">
+		select EMAIL_ID, SEX, RESERVE_DATE, CHECK_OUTDATE
+		from
+		GH_GUEST inner join
+		(select RESERVE_NO, RESERVE_DATE,
+		CHECK_OUTDATE from
+		GH_RESERVE where
+		GH_NO in(select GH_NO from GH_RESERVE
+		where
+		RES_SEQ=#{RES_SEQ}) and
+		IF(CHECK_OUTDATE is
+		null,'99999999',CHECK_OUTDATE)>=#{CUR_DATE}
+		and
+		(select IF(CHECK_OUTDATE
+		is null,'99999999',CHECK_OUTDATE) from
+		GH_RESERVE
+		where
+		RES_SEQ=#{RES_SEQ})>=RESERVE_DATE
+		and
+		IF(CHECK_OUTDATE
+		is null,'99999999',CHECK_OUTDATE)>=(select RESERVE_DATE from
+		GH_RESERVE
+		where
+		RES_SEQ=#{RES_SEQ}))
+		chk_view
+		on
+		GUEST_NO=chk_view.RESERVE_NO
+	</select>
+
+	<select id="profile" resultType="com.allchange.mybatis.domain.Profile"
+		parameterType="com.allchange.mybatis.domain.Profile">
+		select
+		PROFILE_IMG_PATH,INFO,
+		if(VISIT_FG1 is
+		null,null,(select VISIT_NM from GH_VISIT where
+		VISIT_CD=VISIT_FG1))
+		VISIT_FG1,
+		if(VISIT_FG2 is null,null,(select
+		VISIT_NM from GH_VISIT
+		where VISIT_CD=VISIT_FG2)) VISIT_FG2,
+		if(VISIT_FG3 is null,null,(select
+		VISIT_NM from GH_VISIT where
+		VISIT_CD=VISIT_FG3)) VISIT_FG3,
+		if(VISIT_FG4 is null,null,(select
+		VISIT_NM from GH_VISIT where
+		VISIT_CD=VISIT_FG4)) VISIT_FG4,
+		if(VISIT_FG5 is null,null,(select
+		VISIT_NM from GH_VISIT where
+		VISIT_CD=VISIT_FG5)) VISIT_FG5,
+		if(VISIT_FG6 is null,null,(select
+		VISIT_NM from GH_VISIT where
+		VISIT_CD=VISIT_FG6)) VISIT_FG6,
+		SEX,GUEST_FNM,GUEST_LNM,
+		if(NATIONALITY='KR',
+		(select NATION_NM
+		from GH_NATION where
+		NATION_CD=NATIONALITY),
+		(select NATION_ENG_NM from
+		GH_NATION where
+		NATION_CD=NATIONALITY)) NATIONALITY,
+		if(NATIONALITY='KR',
+		(select
+		AREA_NM from GH_AREA where
+		AREA_CD=CITY),
+		(select AREA_ENG_NM from
+		GH_AREA where AREA_CD=CITY))
+		CITY,
+		BIRTH_DAY,E_MAIL
+		from GH_GUEST where
+		EMAIL_ID=#{EMAIL_ID}
+	</select>
+
+	<select id="getReserveId" resultType="com.allchange.mybatis.domain.Reserve_idGetter"
+		parameterType="com.allchange.mybatis.domain.Reserve">
+		select RES_SEQ from GH_RESERVE where
+		(RESERVE_NO=(select
+		GUEST_NO from GH_GUEST where EMAIL_ID=#{RESERVE_NO})) and
+		RESERVE_DTIME=#{RESERVE_DTIME}
+	</select>
+
+	<select id="chkRES" resultType="com.allchange.mybatis.domain.Reserve"
+		parameterType="com.allchange.mybatis.domain.ChkRES">
+		select * from GH_RESERVE where RES_SEQ=#{RES_SEQ} and
+		RESERVE_NO=(select GUEST_NO from GH_GUEST where
+		EMAIL_ID=#{EMAIL_ID})
+	</select>
+
+	<select id="talk" resultType="com.allchange.mybatis.domain.Talk"
+		parameterType="com.allchange.mybatis.domain.Reserve">
+		SELECT RES_SEQ,
+		EMAIL_ID,
+		PROFILE_IMG_PATH,
+		GUEST_FNM,
+		GUEST_LNM,
+		NATIONALITY,
+		INFO,
+		RESERVE_DATE,
+		CHECK_OUTDATE,
+		rID,
+		rPATH,
+		rFNM,
+		rLNM,
+		REPLY_TEXT,
+		REPLY_DTIME
+		FROM
+		(SELECT RES_SEQ,
+		EMAIL_ID,
+		PROFILE_IMG_PATH,
+		GUEST_FNM,
+		GUEST_LNM,
+		if(NATIONALITY='KR',
+		(SELECT
+		NATION_NM FROM GH_NATION WHERE NATION_CD=NATIONALITY
+		),
+		(SELECT
+		NATION_ENG_NM FROM GH_NATION WHERE NATION_CD=NATIONALITY
+		))
+		NATIONALITY,
+		INFO,
+		RESERVE_DATE,
+		CHECK_OUTDATE
+		FROM GH_GUEST
+		INNER JOIN
+		(SELECT RES_SEQ,
+		RESERVE_NO,
+		RESERVE_DATE,
+		CHECK_OUTDATE
+		FROM GH_RESERVE
+		WHERE GH_NO IN
+		(SELECT GH_NO FROM GH_RESERVE WHERE RES_SEQ=#{RES_SEQ}
+		)
+		AND if(CHECK_OUTDATE is NULL,'99999999',CHECK_OUTDATE) >=
+		(SELECT
+		RESERVE_DATE
+		FROM GH_RESERVE
+		WHERE RES_SEQ=#{RES_SEQ}
+		)
+		AND if(
+		(SELECT
+		CHECK_OUTDATE FROM GH_RESERVE WHERE RES_SEQ=#{RES_SEQ}
+		) is
+		NULL,'99999999',
+		(SELECT CHECK_OUTDATE FROM GH_RESERVE WHERE
+		RES_SEQ=#{RES_SEQ}
+		)) >= RESERVE_DATE
+		) chkDate
+		ON GUEST_NO =
+		chkDate.RESERVE_NO
+		) member
+		LEFT OUTER JOIN
+		(SELECT TARGET_RES_SEQ tId,
+		rMember.GUEST_NO rID,
+		PROFILE_IMG_PATH rPATH,
+		GUEST_FNM rFNM,
+		GUEST_LNM
+		rLNM,
+		REPLY_TEXT,
+		REPLY_DTIME
+		FROM
+		(SELECT GUEST_NO,
+		PROFILE_IMG_PATH,
+		GUEST_FNM,
+		GUEST_LNM
+		FROM GH_GUEST
+		WHERE GUEST_NO IN
+		(SELECT RESERVE_NO
+		FROM GH_RESERVE
+		WHERE GH_NO IN
+		(SELECT GH_NO FROM GH_RESERVE WHERE
+		RES_SEQ=#{RES_SEQ}
+		)
+		AND if(CHECK_OUTDATE is
+		NULL,'99999999',CHECK_OUTDATE) >=
+		(SELECT RESERVE_DATE
+		FROM GH_RESERVE
+		WHERE RES_SEQ=#{RES_SEQ}
+		)
+		AND if(
+		(SELECT CHECK_OUTDATE FROM GH_RESERVE
+		WHERE RES_SEQ=#{RES_SEQ}
+		) is NULL,'99999999',
+		(SELECT CHECK_OUTDATE
+		FROM GH_RESERVE WHERE RES_SEQ=#{RES_SEQ}
+		)) >= RESERVE_DATE
+		)
+		) rMember
+		INNER JOIN
+		(SELECT TARGET_RES_SEQ,
+		REPLY_RES_SEQ,
+		REPLY_TEXT,
+		REPLY_DTIME
+		FROM GH_REPLY
+		WHERE (TARGET_RES_SEQ) IN
+		(SELECT RES_SEQ
+		FROM GH_RESERVE
+		WHERE GH_NO IN
+		(SELECT GH_NO FROM GH_RESERVE WHERE RES_SEQ=#{RES_SEQ}
+		)
+		AND if(CHECK_OUTDATE is NULL,'99999999',CHECK_OUTDATE) >=
+		(SELECT
+		RESERVE_DATE
+		FROM GH_RESERVE
+		WHERE RES_SEQ=#{RES_SEQ}
+		)
+		AND if(
+		(SELECT
+		CHECK_OUTDATE FROM GH_RESERVE WHERE RES_SEQ=#{RES_SEQ}
+		) is
+		NULL,'99999999',
+		(SELECT CHECK_OUTDATE FROM GH_RESERVE WHERE
+		RES_SEQ=#{RES_SEQ}
+		)) >= RESERVE_DATE
+		)
+		) chkReply
+		ON rMember.GUEST_NO =
+		(SELECT RESERVE_NO FROM GH_RESERVE WHERE
+		RES_SEQ=chkReply.REPLY_RES_SEQ
+		)
+		ORDER BY REPLY_DTIME DESC
+		) reply ON
+		RES_SEQ = tID
+		ORDER BY RES_SEQ ASC, REPLY_DTIME DESC
+	</select>
+
+	<select id="search" resultType="com.allchange.mybatis.domain.Search">
+		select if(g.NATION_CD='KR',
+		(select AREA_NM from GH_AREA where AREA_CD=g.AREA_CD),
+		(select
+		AREA_ENG_NM from GH_AREA where AREA_CD=g.AREA_CD)) CITY from GH_HOUSE
+		g
+	</select>
+
+	<select id="chkResDate" resultType="com.allchange.mybatis.domain.Reserve"
+		parameterType="com.allchange.mybatis.domain.Reserve">
+		select * from GH_RESERVE where GH_NO=#{GH_NO} and
+		FLOOR_CD=#{FLOOR_CD} and ROOM_CD=#{ROOM_CD} and BED_CD=#{BED_CD} and
+		RESERVE_DATE=#{RESERVE_DATE}
+	</select>
+
+	<select id="chkResFRB" resultType="com.allchange.mybatis.domain.ChkFRB"
+		parameterType="com.allchange.mybatis.domain.Reserve">
+		select distinct if((select count(*) from
+		GH_FRB_BCLASS
+		where GH_NO=#{GH_NO} and FLOOR_CD=#{FLOOR_CD} and
+		ROOM_CD=#{ROOM_CD})=(select count(*) from GH_RESERVE where
+		GH_NO=#{GH_NO}
+		and FLOOR_CD=#{FLOOR_CD} and
+		ROOM_CD=#{ROOM_CD} and
+		(#{RESERVE_DATE} between RESERVE_DATE and
+		if(CHECK_OUTDATE is
+		null,'99999999',CHECK_OUTDATE))),
+		'full','available') CHK from
+		GH_FRB_BCLASS
+	</select>
+
+	<select id="chkResId" resultType="com.allchange.mybatis.domain.Reserve"
+		parameterType="com.allchange.mybatis.domain.Reserve">
+		select * from GH_RESERVE where RES_SEQ=#{RES_SEQ} and
+		BED_CD is not null
+	</select>
+
+	<select id="ghList" resultType="com.allchange.mybatis.domain.GHList"
+		parameterType="com.allchange.mybatis.domain.Filter">
+		SELECT GH_NO, GH_NM, ADDRESS, (
+		SELECT
+		MIN(RENT_PRICE_AVG_WEEKDAY) RENT_PRICE
+		FROM GH_RENT_PRICE
+		WHERE
+		GH_NO=house.GH_NO) RENT_PRICE, LATITUDE, LONGITUDE, MAIN_IMG_PATH
+		MPATH
+		,DETAIL_IMG_PATH1 DPATH1,DETAIL_IMG_PATH2 DPATH2,DETAIL_IMG_PATH3
+		DPATH3,DETAIL_IMG_PATH4 DPATH4,DETAIL_IMG_PATH5
+		DPATH5,DETAIL_IMG_PATH6 DPATH6,
+		DETAIL_IMG_PATH7
+		DPATH7,DETAIL_IMG_PATH8 DPATH8,DETAIL_IMG_PATH9
+		DPATH9,DETAIL_IMG_PATH10
+		DPATH10
+		FROM GH_HOUSE
+		house
+		WHERE GH_NO IN
+		(
+		SELECT GH_NO
+		FROM
+		(
+		SELECT GH_NO,
+		SIGN(COUNT(GH_NO)-(COUNT(RES_SEQ)+#{GROUP})) CHK from
+		(
+		SELECT IF(GH_NO
+		IS NULL,(
+		SELECT GH_NO
+		FROM GH_RESERVE
+		WHERE
+		RES_SEQ=mTable.RES_SEQ),GH_NO) GH_NO, GH_NM, ADDRESS,
+		RENT_PRICE_AVG_WEEKDAY RENT_PRICE,
+		RES_SEQ
+		FROM
+		(
+		SELECT ghBed.GH_NO, GH_NM, ADDRESS,
+		RENT_PRICE_AVG_WEEKDAY, ghBed.FLOOR_CD,
+		ghBed.ROOM_CD, ghBed.BED_CD,
+		resBed.RES_SEQ
+		FROM
+		(
+		SELECT gh.GH_NO, GH_NM,
+		ADDRESS,
+		(
+		SELECT
+		RENT_PRICE_AVG_WEEKDAY
+		FROM
+		GH_RENT_PRICE
+		WHERE
+		GH_NO=bClass.GH_NO AND
+		FLOOR_CD=bClass.FLOOR_CD AND
+		ROOM_CD=bClass.ROOM_CD)
+		RENT_PRICE_AVG_WEEKDAY, FLOOR_CD,
+		ROOM_CD,
+		BED_CD
+		FROM (
+		SELECT *
+		FROM GH_HOUSE
+		WHERE
+		(NATION_CD,AREA_CD) IN(
+		SELECT
+		NATION_CD,AREA_CD
+		FROM GH_AREA
+		WHERE
+		IF(#{NATION}='한국',AREA_NM,AREA_ENG_NM)=#{CITY})) gh
+		INNER JOIN
+		GH_FRB_BCLASS bClass ON gh.GH_NO=bClass.GH_NO)
+		ghBed
+		LEFT OUTER
+		JOIN
+		(
+		SELECT GH_NO, FLOOR_CD, ROOM_CD, BED_CD, RES_SEQ
+		FROM GH_RESERVE
+		WHERE
+		(IF(CHECK_OUTDATE IS NULL,'99999999',CHECK_OUTDATE)
+		>=
+		#{RESERVE_DATE})
+		and
+		(#{CHECK_OUTDATE} >=
+		RESERVE_DATE)
+		AND
+		GH_NO IN(
+		SELECT GH_NO
+		FROM
+		GH_RENT_PRICE
+		WHERE
+		RENT_PRICE_AVG_WEEKDAY >= #{MIN_PRICE} and
+		#{MAX_PRICE} >= RENT_PRICE_AVG_WEEKDAY
+		GROUP BY GH_NO)) resBed ON
+		ghBed.GH_NO=resBed.GH_NO AND
+		ghBed.FLOOR_CD=resBed.FLOOR_CD AND
+		ghBed.ROOM_CD=resBed.ROOM_CD AND
+		ghBed.BED_CD=resBed.BED_CD) mTable
+		ORDER BY GH_NO) chkTable
+		GROUP BY
+		GH_NO) chkNo
+		WHERE CHK != -1)
+	</select>
+
+	<select id="ghListInterest" resultType="com.allchange.mybatis.domain.GHList"
+		parameterType="com.allchange.mybatis.domain.Filter">
+		select GH_NO, GH_NM, ADDRESS, (select
+		MIN(RENT_PRICE_AVG_WEEKDAY) RENT_PRICE from GH_RENT_PRICE where
+		GH_NO=house.GH_NO) RENT_PRICE, LATITUDE, LONGITUDE, MAIN_IMG_PATH
+		MPATH
+		,DETAIL_IMG_PATH1 DPATH1,DETAIL_IMG_PATH2 DPATH2,DETAIL_IMG_PATH3
+		DPATH3,DETAIL_IMG_PATH4 DPATH4,DETAIL_IMG_PATH5
+		DPATH5,DETAIL_IMG_PATH6 DPATH6,
+		DETAIL_IMG_PATH7
+		DPATH7,DETAIL_IMG_PATH8 DPATH8,DETAIL_IMG_PATH9
+		DPATH9,DETAIL_IMG_PATH10
+		DPATH10 from GH_HOUSE
+		house where GH_NO in
+		(select GH_NO
+		from
+		(select GH_NO,
+		SIGN(count(GH_NO)-(count(RES_SEQ)+#{GROUP})) CHK
+		from
+		(select if(GH_NO
+		is null,(select GH_NO from GH_RESERVE where
+		RES_SEQ=mTable.RES_SEQ),GH_NO) GH_NO, GH_NM, ADDRESS,
+		RENT_PRICE_AVG_WEEKDAY RENT_PRICE,
+		RES_SEQ
+		from
+		(select ghBed.GH_NO, GH_NM, ADDRESS,
+		RENT_PRICE_AVG_WEEKDAY, ghBed.FLOOR_CD,
+		ghBed.ROOM_CD, ghBed.BED_CD,
+		resBed.RES_SEQ
+		from
+		(select gh.GH_NO,
+		GH_NM, ADDRESS,
+		(select
+		RENT_PRICE_AVG_WEEKDAY from
+		GH_RENT_PRICE where
+		GH_NO=bClass.GH_NO and
+		FLOOR_CD=bClass.FLOOR_CD and
+		ROOM_CD=bClass.ROOM_CD)
+		RENT_PRICE_AVG_WEEKDAY, FLOOR_CD,
+		ROOM_CD,
+		BED_CD
+		from (select GH_NO, GH_NM, ADDRESS,
+		NATION_CD,
+		AREA_CD from GH_HOUSE
+		where (NATION_CD,AREA_CD) in(select
+		NATION_CD,AREA_CD from GH_AREA where
+		if(#{NATION}='한국',AREA_NM,AREA_ENG_NM)=#{CITY}) and GH_NO
+		in(select
+		GH_NO from
+		(select GH_NO, count(SUPPORT_NM) CNT from
+		(select GH_NO, SUPPORT_NM from GH_SUPPORT) a
+		where
+		SUPPORT_NM in(
+		#{INTEREST.parking},#{INTEREST.washer},#{INTEREST.barbeque},#{INTEREST.rentalbike},
+		#{INTEREST.creditcard},#{INTEREST.petallowed},#{INTEREST.domitory},#{INTEREST.pickup},
+		#{INTEREST.breakfast},#{INTEREST.onlyfemale},#{INTEREST.fishing},#{INTEREST.grouptour},
+		#{INTEREST.foreignerfriendly},#{INTEREST.tourprogram},#{INTEREST.culturetour})
+		group by GH_NO) iTable
+		where CNT >=
+		(if(#{INTEREST.parking}='parking',1,0)+if(#{INTEREST.washer}='washer',1,0)+
+		if(#{INTEREST.barbeque}='barbeque',1,0)+if(#{INTEREST.rentalbike}='rentalbike',1,0)+
+		if(#{INTEREST.creditcard}='creditcard',1,0)+if(#{INTEREST.petallowed}='petallowed',1,0)+
+		if(#{INTEREST.domitory}='domitory',1,0)+if(#{INTEREST.pickup}='pickup',1,0)+if(#{INTEREST.breakfast}='breakfast',1,0)+
+		if(#{INTEREST.onlyfemale}='onlyfemale',1,0)+if(#{INTEREST.fishing}='fishing',1,0)+if(#{INTEREST.grouptour}='grouptour',1,0)+
+		if(#{INTEREST.foreignerfriendly}='foreignerfriendly',1,0)+if(#{INTEREST.tourprogram}='tourprogram',1,0)+
+		if(#{INTEREST.culturetour}='culturetour',1,0)))) gh
+		inner
+		join
+		GH_FRB_BCLASS bClass on gh.GH_NO=bClass.GH_NO)
+		ghBed
+		left outer join
+		(select GH_NO, FLOOR_CD, ROOM_CD, BED_CD, RES_SEQ
+		from GH_RESERVE
+		where
+		(if(CHECK_OUTDATE is null,'99999999',CHECK_OUTDATE)
+		>=
+		#{RESERVE_DATE})
+		and
+		(#{CHECK_OUTDATE} >=
+		RESERVE_DATE) and
+		GH_NO in(select GH_NO from
+		GH_RENT_PRICE
+		where
+		RENT_PRICE_AVG_WEEKDAY >= #{MIN_PRICE} and
+		#{MAX_PRICE} >= RENT_PRICE_AVG_WEEKDAY
+		group by GH_NO)) resBed
+		on
+		ghBed.GH_NO=resBed.GH_NO and
+		ghBed.FLOOR_CD=resBed.FLOOR_CD and
+		ghBed.ROOM_CD=resBed.ROOM_CD and
+		ghBed.BED_CD=resBed.BED_CD) mTable
+		order by GH_NO) chkTable
+		group by
+		GH_NO) chkNo where CHK != -1)
+	</select>
+
+	<select id="ghBooking" resultType="com.allchange.mybatis.domain.Booking"
+		parameterType="com.allchange.mybatis.domain.Filter">
+		select ghFilter.GH_NO, GH_NM, ADDRESS,
+		FLOOR_CD,
+		FLOOR_NM, ROOM_CD, ROOM_NM, RENT_PRICE from
+		(select GH_NO, GH_NM,
+		ADDRESS, LATITUDE, LONGITUDE,
+		MAIN_IMG_PATH MPATH
+		,DETAIL_IMG_PATH1
+		DPATH1,DETAIL_IMG_PATH2 DPATH2,DETAIL_IMG_PATH3
+		DPATH3,DETAIL_IMG_PATH4 DPATH4,DETAIL_IMG_PATH5
+		DPATH5,DETAIL_IMG_PATH6 DPATH6,
+		DETAIL_IMG_PATH7
+		DPATH7,DETAIL_IMG_PATH8 DPATH8,DETAIL_IMG_PATH9
+		DPATH9,DETAIL_IMG_PATH10
+		DPATH10 from GH_HOUSE
+		house
+		where GH_NO in
+		(select GH_NO
+		from
+		(select GH_NO,
+		SIGN(count(GH_NM)-(count(RES_SEQ)+#{GROUP})) CHK from
+		(select if(GH_NO
+		is null,(select GH_NO from GH_RESERVE where
+		RES_SEQ=mTable.RES_SEQ),GH_NO) GH_NO, GH_NM, ADDRESS,
+		RENT_PRICE_AVG_WEEKDAY RENT_PRICE,
+		RES_SEQ
+		from
+		(select ghBed.GH_NO, GH_NM, ADDRESS,
+		RENT_PRICE_AVG_WEEKDAY, ghBed.FLOOR_CD,
+		ghBed.ROOM_CD, ghBed.BED_CD,
+		resBed.RES_SEQ
+		from
+		(select gh.GH_NO,
+		GH_NM, ADDRESS,
+		(select
+		RENT_PRICE_AVG_WEEKDAY from
+		GH_RENT_PRICE where
+		GH_NO=bClass.GH_NO and
+		FLOOR_CD=bClass.FLOOR_CD and
+		ROOM_CD=bClass.ROOM_CD)
+		RENT_PRICE_AVG_WEEKDAY, FLOOR_CD,
+		ROOM_CD,
+		BED_CD
+		from (select * from GH_HOUSE where
+		(NATION_CD,AREA_CD)
+		in(select
+		NATION_CD,AREA_CD from GH_AREA where
+		if(#{NATION}='한국',AREA_NM,AREA_ENG_NM)=#{CITY})) gh
+		inner join
+		GH_FRB_BCLASS bClass on gh.GH_NO=bClass.GH_NO)
+		ghBed
+		left outer join
+		(select GH_NO, FLOOR_CD, ROOM_CD, BED_CD, RES_SEQ
+		from GH_RESERVE
+		where
+		(if(CHECK_OUTDATE is null,'99999999',CHECK_OUTDATE)
+		>=
+		#{RESERVE_DATE})
+		and
+		(#{CHECK_OUTDATE} >=
+		RESERVE_DATE) and
+		GH_NO in(select GH_NO from
+		GH_RENT_PRICE
+		where
+		RENT_PRICE_AVG_WEEKDAY >= #{MIN_PRICE} and
+		#{MAX_PRICE} >= RENT_PRICE_AVG_WEEKDAY
+		group by GH_NO)) resBed
+		on
+		ghBed.GH_NO=resBed.GH_NO and
+		ghBed.FLOOR_CD=resBed.FLOOR_CD and
+		ghBed.ROOM_CD=resBed.ROOM_CD and
+		ghBed.BED_CD=resBed.BED_CD) mTable
+		order by GH_NO) chkTable
+		group by
+		GH_NO) chkNo where CHK != -1) and
+		GH_NO=#{GH_NO}) ghFilter right outer join
+		(select GH_NO, FLOOR_CD,
+		(select FLOOR_NM from GH_FRB_FCLASS where
+		FLOOR_CD=r.FLOOR_CD and
+		GH_NO=#{GH_NO}) FLOOR_NM,
+		ROOM_CD, ROOM_NM, (select
+		RENT_PRICE_AVG_WEEKDAY
+		from GH_RENT_PRICE where
+		GH_NO=r.GH_NO and
+		FLOOR_CD=r.FLOOR_CD and
+		ROOM_CD=r.ROOM_CD) RENT_PRICE from
+		GH_FRB_RCLASS r where
+		GH_NO=#{GH_NO}) roomFilter
+		on
+		ghFilter.GH_NO=roomFilter.GH_NO order by
+		FLOOR_CD, ROOM_CD
+	</select>
+
+	<select id="ghBookingInterest" resultType="com.allchange.mybatis.domain.Booking"
+		parameterType="com.allchange.mybatis.domain.Filter">
+		select ghFilter.GH_NO, GH_NM, ADDRESS,
+		FLOOR_CD,
+		FLOOR_NM, ROOM_CD, ROOM_NM, RENT_PRICE from
+		(select GH_NO, GH_NM,
+		ADDRESS, LATITUDE, LONGITUDE,
+		MAIN_IMG_PATH MPATH
+		,DETAIL_IMG_PATH1
+		DPATH1,DETAIL_IMG_PATH2 DPATH2,DETAIL_IMG_PATH3
+		DPATH3,DETAIL_IMG_PATH4 DPATH4,DETAIL_IMG_PATH5
+		DPATH5,DETAIL_IMG_PATH6 DPATH6,
+		DETAIL_IMG_PATH7
+		DPATH7,DETAIL_IMG_PATH8 DPATH8,DETAIL_IMG_PATH9
+		DPATH9,DETAIL_IMG_PATH10
+		DPATH10 from GH_HOUSE
+		house
+		where GH_NO in
+		(select GH_NO
+		from
+		(select GH_NO,
+		SIGN(count(GH_NM)-(count(RES_SEQ)+#{GROUP})) CHK from
+		(select if(GH_NO
+		is null,(select GH_NO from GH_RESERVE where
+		RES_SEQ=mTable.RES_SEQ),GH_NO) GH_NO, GH_NM, ADDRESS,
+		RENT_PRICE_AVG_WEEKDAY RENT_PRICE,
+		RES_SEQ
+		from
+		(select ghBed.GH_NO, GH_NM, ADDRESS,
+		RENT_PRICE_AVG_WEEKDAY, ghBed.FLOOR_CD,
+		ghBed.ROOM_CD, ghBed.BED_CD,
+		resBed.RES_SEQ
+		from
+		(select gh.GH_NO,
+		GH_NM, ADDRESS,
+		(select
+		RENT_PRICE_AVG_WEEKDAY from
+		GH_RENT_PRICE where
+		GH_NO=bClass.GH_NO and
+		FLOOR_CD=bClass.FLOOR_CD and
+		ROOM_CD=bClass.ROOM_CD)
+		RENT_PRICE_AVG_WEEKDAY, FLOOR_CD,
+		ROOM_CD,
+		BED_CD
+		from (select GH_NO, GH_NM, ADDRESS,
+		NATION_CD,
+		AREA_CD from GH_HOUSE
+		where (NATION_CD,AREA_CD) in(select
+		NATION_CD,AREA_CD from GH_AREA where
+		if(#{NATION}='한국',AREA_NM,AREA_ENG_NM)=#{CITY}) and GH_NO
+		in(select
+		GH_NO from
+		(select GH_NO, count(SUPPORT_NM) CNT from
+		(select GH_NO, SUPPORT_NM from GH_SUPPORT) a
+		where
+		SUPPORT_NM in(
+		#{INTEREST.parking},#{INTEREST.washer},#{INTEREST.barbeque},#{INTEREST.rentalbike},
+		#{INTEREST.creditcard},#{INTEREST.petallowed},#{INTEREST.domitory},#{INTEREST.pickup},
+		#{INTEREST.breakfast},#{INTEREST.onlyfemale},#{INTEREST.fishing},#{INTEREST.grouptour},
+		#{INTEREST.foreignerfriendly},#{INTEREST.tourprogram},#{INTEREST.culturetour})
+		group by GH_NO) iTable
+		where CNT >=
+		(if(#{INTEREST.parking}='parking',1,0)+if(#{INTEREST.washer}='washer',1,0)+
+		if(#{INTEREST.barbeque}='barbeque',1,0)+if(#{INTEREST.rentalbike}='rentalbike',1,0)+
+		if(#{INTEREST.creditcard}='creditcard',1,0)+if(#{INTEREST.petallowed}='petallowed',1,0)+
+		if(#{INTEREST.domitory}='domitory',1,0)+if(#{INTEREST.pickup}='pickup',1,0)+if(#{INTEREST.breakfast}='breakfast',1,0)+
+		if(#{INTEREST.onlyfemale}='onlyfemale',1,0)+if(#{INTEREST.fishing}='fishing',1,0)+if(#{INTEREST.grouptour}='grouptour',1,0)+
+		if(#{INTEREST.foreignerfriendly}='foreignerfriendly',1,0)+if(#{INTEREST.tourprogram}='tourprogram',1,0)+
+		if(#{INTEREST.culturetour}='culturetour',1,0)))) gh
+		inner
+		join
+		GH_FRB_BCLASS bClass on gh.GH_NO=bClass.GH_NO)
+		ghBed
+		left outer join
+		(select GH_NO, FLOOR_CD, ROOM_CD, BED_CD, RES_SEQ
+		from GH_RESERVE
+		where
+		(if(CHECK_OUTDATE is null,'99999999',CHECK_OUTDATE)
+		>=
+		#{RESERVE_DATE})
+		and
+		(#{CHECK_OUTDATE} >=
+		RESERVE_DATE) and
+		GH_NO in(select GH_NO from
+		GH_RENT_PRICE
+		where
+		RENT_PRICE_AVG_WEEKDAY >= #{MIN_PRICE} and
+		#{MAX_PRICE} >= RENT_PRICE_AVG_WEEKDAY
+		group by GH_NO)) resBed
+		on
+		ghBed.GH_NO=resBed.GH_NO and
+		ghBed.FLOOR_CD=resBed.FLOOR_CD and
+		ghBed.ROOM_CD=resBed.ROOM_CD and
+		ghBed.BED_CD=resBed.BED_CD) mTable
+		order by GH_NO) chkTable
+		group by
+		GH_NO) chkNo where CHK != -1) and
+		GH_NO=#{GH_NO}) ghFilter right outer join
+		(select GH_NO, FLOOR_CD,
+		(select FLOOR_NM from GH_FRB_FCLASS where
+		FLOOR_CD=r.FLOOR_CD and
+		GH_NO=#{GH_NO}) FLOOR_NM,
+		ROOM_CD, ROOM_NM, (select
+		RENT_PRICE_AVG_WEEKDAY
+		from GH_RENT_PRICE where
+		GH_NO=r.GH_NO and
+		FLOOR_CD=r.FLOOR_CD and
+		ROOM_CD=r.ROOM_CD) RENT_PRICE from
+		GH_FRB_RCLASS r where
+		GH_NO=#{GH_NO}) roomFilter
+		on
+		ghFilter.GH_NO=roomFilter.GH_NO order by
+		FLOOR_CD, ROOM_CD
+	</select>
+
+	<select id="detail" resultType="com.allchange.mybatis.domain.Detail"
+		parameterType="com.allchange.mybatis.domain.Detail">
+		SELECT house.GH_NO, GH_NM, RENT_PRICE, MAIN_IMG_PATH,
+				DETAIL_IMG_PATH1,
+				DETAIL_IMG_PATH2, DETAIL_IMG_PATH3, DETAIL_IMG_PATH4, DETAIL_IMG_PATH5, DETAIL_IMG_PATH6, DETAIL_IMG_PATH7, DETAIL_IMG_PATH8, DETAIL_IMG_PATH9, DETAIL_IMG_PATH10, SCORE,
+				HOUSE_TYPE, ROOM_CNT,
+				RESTROOM_CNT, BED_CNT,
+				COMMUNITYSPACE, INTRODUCE,
+				TEL_NO, LATITUDE, LONGITUDE, BED_TYPE, GUEST_FNM,
+				GUEST_LNM,
+				PROFILE_IMG_PATH, ADD_DATE, REVIEW, SUPPORT_NM
+		FROM
+					(
+				SELECT GH_NO,
+						GH_NM, (
+				SELECT MIN(RENT_PRICE_AVG_WEEKDAY)
+				FROM GH_RENT_PRICE
+				WHERE
+						GH_NO=#{GH_NO}) RENT_PRICE,
+						MAIN_IMG_PATH, DETAIL_IMG_PATH1,
+						DETAIL_IMG_PATH2, DETAIL_IMG_PATH3, DETAIL_IMG_PATH4, DETAIL_IMG_PATH5, DETAIL_IMG_PATH6, DETAIL_IMG_PATH7, DETAIL_IMG_PATH8, DETAIL_IMG_PATH9, DETAIL_IMG_PATH10, (
+				SELECT AVG(SCORE)
+				FROM GH_REVIEW
+				WHERE GH_NO=#{GH_NO}) SCORE,
+						(
+				SELECT HOUSE_TYPE_NM
+				FROM GH_HOUSE_TYPE
+				WHERE HOUSE_TYPE=(
+				SELECT HOUSE_TYPE
+				FROM GH_HOUSE
+				WHERE GH_NO=#{GH_NO})) HOUSE_TYPE, (
+				SELECT COUNT(ROOM_CD)
+				FROM
+						GH_FRB_RCLASS
+				WHERE GH_NO=#{GH_NO})
+						ROOM_CNT,
+						RESTROOM_CNT, (
+				SELECT COUNT(BED_CD)
+				FROM GH_FRB_BCLASS
+				WHERE GH_NO=#{GH_NO})
+						BED_CNT,
+						COMMUNITYSPACE, INTRODUCE, TEL_NO, LATITUDE, LONGITUDE
+				FROM GH_HOUSE
+				WHERE
+						GH_NO=#{GH_NO}) house
+			LEFT OUTER
+			JOIN
+						(
+				SELECT review.GH_NO,
+						BED_TYPE, GUEST_FNM, GUEST_LNM, PROFILE_IMG_PATH,
+						ADD_DATE, REVIEW,
+						SUPPORT_NM
+				FROM
+							(
+					SELECT bed.GH_NO, BED_TYPE, GUEST_FNM, GUEST_LNM,
+							PROFILE_IMG_PATH,
+							ADD_DATE, REVIEW
+					FROM
+								(
+						SELECT DISTINCT GH_NO, (
+						SELECT
+								BED_TYPE_NM
+						FROM GH_BED_TYPE
+						WHERE BED_TYPE=b.BED_TYPE) BED_TYPE
+						FROM
+								GH_FRB_BCLASS b
+						WHERE GH_NO=#{GH_NO}) bed
+					LEFT OUTER
+					JOIN
+								(
+						SELECT
+								GH_NO,
+								(
+						SELECT GUEST_FNM
+						FROM GH_GUEST
+						WHERE
+								GUEST_NO=review.GUEST_NO)
+								GUEST_FNM, (
+						SELECT GUEST_LNM
+						FROM GH_GUEST
+						WHERE
+								GUEST_NO=review.GUEST_NO) GUEST_LNM,
+								(
+						SELECT PROFILE_IMG_PATH
+						FROM
+								GH_GUEST
+						WHERE GUEST_NO=review.GUEST_NO)
+								PROFILE_IMG_PATH, ADD_DATE,
+								REVIEW
+						FROM GH_REVIEW review) re ON bed.GH_NO=re.GH_NO) review
+				LEFT OUTER
+				JOIN
+							(
+					SELECT GH_NO, SUPPORT_NM
+					FROM GH_SUPPORT
+					WHERE
+							GH_NO=#{GH_NO}) support ON review.GH_NO=support.GH_NO) review ON
+						house.GH_NO=review.GH_NO
+			ORDER BY ADD_DATE DESC, PROFILE_IMG_PATH
+	</select>
+
+	<select id="chkContact" resultType="com.allchange.mybatis.domain.Contact"
+		parameterType="com.allchange.mybatis.domain.Contact">
+		select if(SIGN((select count(GH_NO) CNT from
+		GH_FRB_BCLASS where GH_NO=#{GH_NO} and FLOOR_CD=#{FLOOR_CD} and
+		ROOM_CD=#{ROOM_CD})-((select count(GH_NO) CNT
+		from GH_RESERVE
+		where
+		(if(CHECK_OUTDATE is null,'99999999',CHECK_OUTDATE)
+		>=
+		#{RESERVE_DATE})
+		and
+		(#{CHECK_OUTDATE} >=
+		RESERVE_DATE) and GH_NO=#{GH_NO} and
+		FLOOR_CD=#{FLOOR_CD}
+		and
+		ROOM_CD=#{ROOM_CD} group by
+		GH_NO)+#{USER_GROUP}))=-1,
+		'0',
+		'1') contact from GH_HOUSE where
+		GH_NO=#{GH_NO}
+	</select>
+
+	<select id="contactGetter" resultType="com.allchange.mybatis.domain.ContactGetter"
+		parameterType="com.allchange.mybatis.domain.Contact">
+		select RES_SEQ, RENT_PRICE, BANK_CD, ACCT_CD, ACCT_NM,
+		RESERVE_DTIME, TEL_NO
+		from
+		(select GH_NO, RES_SEQ, RENT_PRICE,
+		RESERVE_DTIME from GH_RESERVE where
+		GH_NO=#{GH_NO} and
+		FLOOR_CD=#{FLOOR_CD} and ROOM_CD=#{ROOM_CD}
+		and
+		RESERVE_DATE=#{RESERVE_DATE} and RESERVE_NO=(select GUEST_NO from
+		GH_GUEST where EMAIL_ID=#{RESERVE_NO})) res
+		inner join
+		(select GH_NO,
+		BANK_CD, ACCT_CD, ACCT_NM, TEL_NO from GH_HOUSE where
+		GH_NO=#{GH_NO})
+		gh
+		on res.GH_NO=gh.GH_NO
+	</select>
+
+	<insert id="signup" parameterType="com.allchange.mybatis.domain.Signup">
+		insert into
+		GH_GUEST(GUEST_NO,EMAIL_ID,FACEBOOK_CODE,EMAIL_PWD,GUEST_FNM,GUEST_LNM,NATIONALITY,CITY,BIRTH_DAY,SEX,E_MAIL,HP_NO,DEVICE_TYPE,REG_ID,EMAIL_FG,SMS_FG,RECEIPT_FG,JOIN_DATE,PROFILE_IMG_PATH,CREATE_DTIME,CREATE_ID,LAST_DTIME,LAST_ID)
+		values((select if(count(GUEST_NO)=0,1,MAX(GUEST_NO)+1) GUEST_NO
+		from
+		GH_GUEST
+		sub),#{EMAIL_ID},#{FACEBOOK_CODE},PASSWORD(#{EMAIL_PWD}),#{GUEST_FNM},#{GUEST_LNM},
+		(select NATION_CD from GH_NATION sub where
+		NATION_ENG_NM=#{NATIONALITY}),
+		(select AREA_CD from GH_AREA sub where
+		AREA_ENG_NM=#{CITY}),
+		#{BIRTH_DAY},#{SEX},#{E_MAIL},#{HP_NO},#{DEVICE_TYPE},#{REG_ID},#{EMAIL_FG},#{SMS_FG},#{RECEIPT_FG},#{JOIN_DATE},#{PROFILE_IMG_PATH},#{CREATE_DTIME},#{CREATE_ID},#{LAST_DTIME},#{LAST_ID})
+	</insert>
+
+	<insert id="checkinWalk" parameterType="com.allchange.mybatis.domain.Reserve">
+		insert into
+		GH_RESERVE(RES_SEQ,GH_NO,FLOOR_CD,ROOM_CD,BED_CD,STATE_FG,RESERVE_DATE,RESERVE_NO,RESERVE_DTIME,RESERVE_TYPE,CHECK_IN_NO,CHECK_IN_DTIME)
+		values((select if(count(RES_SEQ)=0,1,MAX(RES_SEQ)+1) RES_SEQ from
+		GH_RESERVE
+		sub),#{GH_NO},#{FLOOR_CD},#{ROOM_CD},#{BED_CD},#{STATE_FG},#{RESERVE_DATE},
+		(select GUEST_NO from GH_GUEST where EMAIL_ID=#{RESERVE_NO}),
+		#{RESERVE_DTIME},#{RESERVE_TYPE},
+		(select GUEST_NO from GH_GUEST where
+		EMAIL_ID=#{CHECK_IN_NO}),
+		#{CHECK_IN_DTIME})
+	</insert>
+
+	<insert id="reply" parameterType="com.allchange.mybatis.domain.Reply">
+		insert into GH_REPLY values(
+		#{TARGET_RES_SEQ},
+		#{REPLY_RES_SEQ},
+		#{REPLY_TEXT},
+		#{REPLY_DTIME})
+	</insert>
+
+	<insert id="bookingContact" parameterType="com.allchange.mybatis.domain.Contact">
+		insert into
+		GH_RESERVE(RES_SEQ,GH_NO,FLOOR_CD,ROOM_CD,STATE_FG,RENT_PRICE,RESERVE_DATE,CHECK_OUTDATE,RESERVE_NO,RESERVE_DTIME,RESERVE_TYPE)
+		values((select if(count(RES_SEQ)=0,1,MAX(RES_SEQ)+1) RES_SEQ from
+		GH_RESERVE
+		sub),#{GH_NO},#{FLOOR_CD},#{ROOM_CD},#{STATE_FG},#{RENT_PRICE},#{RESERVE_DATE},#{CHECK_OUTDATE},
+		(select GUEST_NO from GH_GUEST where EMAIL_ID=#{RESERVE_NO}),
+		#{RESERVE_DTIME},#{RESERVE_TYPE})
+	</insert>
+	
+	<insert id="makeRoom" parameterType="com.allchange.mybatis.domain.MakeRoom">
+		INSERT INTO GH_TALK_ROOM VALUES(
+		(
+			SELECT IF(COUNT(ROOM_NO)=0,1, MAX(ROOM_NO)+1) ROOM_NO
+			FROM GH_TALK_ROOM sub),
+			#{GH_NO},
+			#{SENDER_ID},
+			#{CHECK_INDATE},
+			#{CHECK_OUTDATE})
+	</insert>
+	
+	<insert id="writeMessage" parameterType="com.allchange.mybatis.domain.WriteMessage">
+		INSERT INTO GH_TALK_MESSAGES VALUES(
+			#{SENDER_ID},
+			#{MESSAGE},
+			#{MESSAGE_DTIME})
+	</insert>
+	
+	<insert id="writeLastMessage" parameterType="com.allchange.mybatis.domain.WriteLastMessage">
+		INSERT INTO GH_TALK_LAST_MESSAGES VALUES(
+			#{SENDER_ID},
+			#{LAST_MESSAGE},
+			#{LAST_MESSAGE_DTIME})
+	</insert>
+	
+	<update id="updateLastMessage" parameterType="com.allchange.mybatis.domain.WriteLastMessage">
+		UPDATE GH_TALK_LAST_MESSAGES SET
+		LAST_MESSAGE = #{LAST_MESSAGE},
+		LAST_MESSAGE_DTIME = #{LAST_MESSAGE_DTIME}
+		WHERE SENDER_ID = #{SENDER_ID}
+	</update>
+
+	<update id="setRegid" parameterType="com.allchange.mybatis.domain.Login">
+		UPDATE GH_GUEST SET
+		REG_ID =
+		#{REG_ID}
+		WHERE EMAIL_ID=#{EMAIL_ID}
+	</update>
+
+	<update id="checkinRes" parameterType="com.allchange.mybatis.domain.Reserve">
+		update GH_RESERVE set
+		BED_CD=#{BED_CD},STATE_FG=#{STATE_FG},
+		CHECK_IN_NO=(select GUEST_NO
+		from GH_GUEST where
+		EMAIL_ID=#{CHECK_IN_NO}),
+		CHECK_IN_DTIME=#{CHECK_IN_DTIME}
+		where
+		RES_SEQ=#{RES_SEQ}
+	</update>
+
+	<update id="profileUpdate" parameterType="com.allchange.mybatis.domain.Profile">
+		update GH_GUEST set
+		INFO=#{INFO},
+		VISIT_FG1=if(#{VISIT_FG1}='',null,(select VISIT_CD
+		from
+		GH_VISIT where VISIT_NM=#{VISIT_FG1})),
+		VISIT_FG2=if(#{VISIT_FG2}='',null,(select VISIT_CD from GH_VISIT
+		where
+		VISIT_NM=#{VISIT_FG2})),
+		VISIT_FG3=if(#{VISIT_FG3}='',null,(select
+		VISIT_CD from GH_VISIT
+		where VISIT_NM=#{VISIT_FG3})),
+		VISIT_FG4=if(#{VISIT_FG4}='',null,(select VISIT_CD from GH_VISIT
+		where
+		VISIT_NM=#{VISIT_FG4})),
+		VISIT_FG5=if(#{VISIT_FG5}='',null,(select
+		VISIT_CD from GH_VISIT
+		where VISIT_NM=#{VISIT_FG5})),
+		VISIT_FG6=if(#{VISIT_FG6}='',null,(select VISIT_CD from GH_VISIT
+		where
+		VISIT_NM=#{VISIT_FG6})),
+		SEX=#{SEX},
+		GUEST_FNM=#{GUEST_FNM},
+		GUEST_LNM=#{GUEST_LNM},
+		NATIONALITY=if(#{NATIONALITY}='',null,(select
+		NATION_CD from
+		GH_NATION where NATION_NM=#{NATIONALITY})),
+		CITY=if(#{CITY}='',null,(select AREA_CD from GH_AREA where
+		AREA_NM=#{CITY})),
+		BIRTH_DAY=#{BIRTH_DAY},
+		E_MAIL=#{E_MAIL},
+		PROFILE_IMG_PATH=#{PROFILE_IMG_PATH} where
+		EMAIL_ID=#{EMAIL_ID}
+	</update>
+
+	<update id="checkout" parameterType="String">
+		update GH_RESERVE set
+		CHECK_OUT_NO = RESERVE_NO,
+		CHECK_OUT_DTIME = #{DTIME}
+		where
+		(CHECK_OUT_NO is null) and
+		CHECK_OUTDATE=SUBSTR(#{DTIME},1,8)
+	</update>
+	
+	<update id="updateStateFg" parameterType="String">
+		UPDATE GH_RESERVE SET
+		STATE_FG = '3'
+		WHERE CHECK_OUTDATE=#{DATE}
+	</update>
+</mapper>
