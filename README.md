@@ -1,8 +1,10 @@
 picker_gellery
 =========
 
+ver0.2
+
 #Preview
-==================
+=========
 
 >>###Picker_Gallery sample module for android by jd
 
